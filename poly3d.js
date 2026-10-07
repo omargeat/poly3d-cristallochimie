@@ -278,9 +278,16 @@ return {el:app,touching:function(){return count()>0;},close:function(){ if(ro) r
 /* ---------- Démarrage selon la page ---------- */
 function find(id){return ALL.filter(function(s){return s.id===id;})[0];}
 window.Poly3D={open:function(id,opt){var S=find(id); return S?viewer(S,opt):null;}};
-var id=document.body.getAttribute('data-structure'), ul=document.getElementById('liste');
+var id=document.body.getAttribute('data-structure'), liste=document.getElementById('liste');
 if(id){ if(!window.Poly3D.open(id)) document.body.textContent='Structure inconnue : '+id; }
-else if(ul) ALL.forEach(function(s){var li=document.createElement('li'), a=document.createElement('a');   // page d'accueil
-  a.href=s.id+'.html'; a.textContent=s.nom; var c=document.createElement('code'); c.textContent=s.formule; a.appendChild(c);
-  var sm=document.createElement('small'); sm.textContent=s.resume; a.appendChild(sm); li.appendChild(a); ul.appendChild(li);});
+else if(liste){ // page d'accueil : une rubrique par famille, dans l'ordre du poly ; une structure sans famille va dans « Autres »
+  var fams=(window.POLY3D_FAMILLES||[]).slice(), vus={}; fams.forEach(function(f){f.ids.forEach(function(k){vus[k]=1;});});
+  var reste=ALL.filter(function(s){return !vus[s.id];}).map(function(s){return s.id;}); if(reste.length) fams.push({nom:fams.length?'Autres structures':'',ids:reste});
+  fams.forEach(function(f){
+    if(f.nom){var h2=document.createElement('h2'); h2.textContent=f.nom; liste.appendChild(h2);}
+    var ul=document.createElement('ul'); liste.appendChild(ul);
+    f.ids.forEach(function(k){var s=find(k); if(!s) return; var li=document.createElement('li'), a=document.createElement('a');
+      a.href=s.id+'.html'; a.textContent=s.nom; var c=document.createElement('code'); c.textContent=s.formule; a.appendChild(c);
+      var sm=document.createElement('small'); sm.textContent=s.resume; a.appendChild(sm); li.appendChild(a); ul.appendChild(li);});});
+}
 })();

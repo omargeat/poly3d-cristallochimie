@@ -9,6 +9,13 @@
   function cfc(sp,dx,dy,dz){dx=dx||0;dy=dy||0;dz=dz||0;
     return [[0,0,0],[.5,.5,0],[.5,0,.5],[0,.5,.5]].map(function(p){return [sp,(p[0]+dx)%1,(p[1]+dy)%1,(p[2]+dz)%1];});}
 
+  // page d'accueil : les structures dans l'ordre du poly, regroupées par famille
+  window.POLY3D_FAMILLES=[
+    {nom:'Structures compactes et pseudo-compactes', ids:['hc','cfc','cc']},
+    {nom:'Structures ioniques', ids:['cscl','nacl','zns','wurtzite','caf2']},
+    {nom:'Structures covalentes', ids:['diamant','graphite']}
+  ];
+
   window.POLY3D_STRUCTURES=[
     {id:'cc', nom:'Cubique centré', formule:'cc', groupe:'Im3̄m',
      resume:'Un atome à chaque sommet et un au centre du cube. Exemple : fer α.',

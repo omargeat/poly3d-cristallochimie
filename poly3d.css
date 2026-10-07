@@ -99,3 +99,5 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
 .stage.ar .caption{right:auto}
 .stage.ar .axis{color:var(--ink);text-shadow:0 0 3px #fff,0 0 3px #fff}
 .facts a{color:var(--accent)}
+.home h2{margin:22px 0 10px;padding-top:12px;border-top:1px solid var(--rule);font-size:.74rem;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.home h2:first-child{margin-top:0}
