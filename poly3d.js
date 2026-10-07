@@ -16,14 +16,17 @@ if(!id){
 var S=ALL.filter(function(s){return s.id===id;})[0];
 if(!S){document.body.textContent='Structure inconnue : '+id; return;}
 
-var VIEWS={
-  free:{n:[1,.5,.4],up:[0,0,1]},
-  '001':{n:[0,0,1],up:[-1,0,0],period:'a'},
-  '110':{n:[1,1,0],up:[0,0,1],period:'a√2'},
-  '111':{n:[1,1,1],up:[0,0,1],period:'a√3'}
-};
-var state={view:'free',model:'eclate',cotes:true,poly:-1,persp:true,zoom:1};
-var DIST=5, EPS=1e-6;
+var HEX=S.maille&&S.maille.type==='hex', CA=HEX?S.maille.c/S.a:1;
+// coordonnées réduites -> cartésiennes, en unités de a
+function cart(f){return HEX?[f[0]-f[1]/2,f[1]*Math.sqrt(3)/2,f[2]*CA]:[f[0],f[1],f[2]];}
+// vues : rangée [uvw] regardée de face, « up » vers le haut de l'écran, période = longueur de la rangée
+var FREE=HEX?{n:[.5,-1,.45],up:[0,0,1]}:{n:[1,.5,.4],up:[0,0,1]};
+var AXES=HEX?[{id:'001',uvw:[0,0,1],up:[0,1,0],period:'c'},{id:'100',uvw:[1,0,0],up:[0,0,1],period:'a'},{id:'120',uvw:[1,2,0],up:[0,0,1],period:'a√3'}]
+            :[{id:'001',uvw:[0,0,1],up:[-1,0,0],period:'a'},{id:'110',uvw:[1,1,0],up:[0,0,1],period:'a√2'},{id:'111',uvw:[1,1,1],up:[0,0,1],period:'a√3'}];
+var VIEWS={free:FREE}; AXES.forEach(function(v){v.d=cart(v.uvw); v.n=v.d; VIEWS[v.id]=v;});
+var FIXE=S.region||null; // région imposée par la fiche (graphite)
+var state={view:'free',model:'eclate',cotes:true,poly:-1,persp:true,zoom:1,prisme:false};
+var DIST=5, EPS=1e-6, TOL=.02;
 
 /* ---------- Construction de la page ---------- */
 document.title='Poly3D '+S.formule;
@@ -40,8 +43,7 @@ Object.keys(S.especes).forEach(function(sp){var e=S.especes[sp], d=h('div',{},'<
   stage.querySelector('.legend').appendChild(d);});
 var panel=h('section',{'class':'panel','aria-label':'Commandes'},
   '<div class="row"><span>Vue</span><div class="seg" id="views">'+
-    '<button id="v-free" data-view="free">3D</button><button id="v-001" class="idx" data-view="001">[001]</button>'+
-    '<button id="v-110" class="idx" data-view="110">[110]</button><button id="v-111" class="idx" data-view="111">[111]</button></div></div>'+
+    '<button id="v-free" data-view="free">3D</button>'+AXES.map(function(v){return '<button id="v-'+v.id+'" class="idx" data-view="'+v.id+'">['+v.id+']</button>';}).join('')+'</div></div>'+
   '<div class="row"><span>Modèle</span><div class="seg" id="models">'+
     '<button id="m-eclate" data-model="eclate">Éclaté</button><button id="m-compact" data-model="compact">Compact</button></div></div>'+
   '<div class="row"><span>Afficher</span><div class="opts" id="opts"><button id="o-cotes">Cotes</button></div></div>'+
@@ -49,8 +51,9 @@ var panel=h('section',{'class':'panel','aria-label':'Commandes'},
   '<p class="help">Glisser pour tourner, molette ou pincement pour zoomer. Les boutons [uvw] donnent la projection exacte selon cette rangée, sans perspective.</p>');
 var opts=panel.querySelector('#opts');
 (S.polyedres||[]).forEach(function(p,i){var b=h('button',{id:'o-poly'+i,'data-poly':i}); b.textContent=p.nom; opts.appendChild(b);});
+if(HEX&&!FIXE) opts.appendChild(h('button',{id:'o-prisme'},'Prisme hexagonal'));
 opts.appendChild(h('button',{id:'o-persp'},'Perspective'));
-panel.querySelector('.facts').textContent='a = '+S.a+' pm · '+S.infos;
+panel.querySelector('.facts').textContent='a = '+S.a+' pm · '+(HEX?'c = '+S.maille.c+' pm · ':'')+S.infos;
 app.appendChild(header); app.appendChild(stage); app.appendChild(panel); document.body.appendChild(app);
 
 /* ---------- Vecteurs, quaternions ---------- */
@@ -80,46 +83,59 @@ function quatFor(view){var v=VIEWS[view], n=norm(v.n), up=v.up, k=dot(up,n);
   return qNorm(qFromM([r[0],r[1],r[2],up[0],up[1],up[2],n[0],n[1],n[2]]));}
 
 /* ---------- Géométrie tirée de la fiche ---------- */
-function P(f){return [f[0]-.5,f[1]-.5,f[2]-.5];} // maille cubique centrée sur l'origine, en unités de a
-// atomes de la maille, y compris ceux partagés sur les sommets, arêtes et faces
-var atoms=[], seen={};
-S.motif.forEach(function(m){[-1,0,1].forEach(function(dx){[-1,0,1].forEach(function(dy){[-1,0,1].forEach(function(dz){
-  var f=[m[1]+dx,m[2]+dy,m[3]+dz]; if(f.some(function(x){return x<-EPS||x>1+EPS;})) return;
-  var key=m[0]+f.map(function(x){return Math.round(x*48);}).join(','); if(seen[key]) return; seen[key]=1;
-  atoms.push({sp:m[0],f:f,p:P(f)});});});});});
-// liaisons : premiers voisins entre les espèces indiquées
-var links=[];
-(S.liaisons||[]).forEach(function(pair){var best=Infinity, L=[];
-  atoms.forEach(function(A,i){ if(A.sp!==pair[0]) return; atoms.forEach(function(B,j){ if(B.sp!==pair[1]||i===j) return;
-    if(pair[0]===pair[1]&&j<i) return; var d=len(sub(A.f,B.f)); if(d<EPS) return;
-    if(d<best-1e-4){best=d;L=[];} if(Math.abs(d-best)<1e-4) L.push({a:A,b:B});});});
-  links=links.concat(L);});
-// arêtes de la maille, avec les atomes posés dessus (pour interrompre le trait à leur surface)
-var edges=[];
-[0,1,2].forEach(function(ax){[0,1].forEach(function(u){[0,1].forEach(function(v){
-  var o=[0,0,0], e=[0,0,0], o1=(ax+1)%3, o2=(ax+2)%3; o[o1]=u; o[o2]=v; e[ax]=1;
-  var on=atoms.filter(function(a){return Math.abs(a.f[o1]-u)<EPS&&Math.abs(a.f[o2]-v)<EPS;}).map(function(a){return {t:a.f[ax],sp:a.sp};});
-  edges.push({a:P(o),b:P([o[0]+e[0],o[1]+e[1],o[2]+e[2]]),on:on});});});});
-// polyèdres de coordination : enveloppe convexe des plus proches voisins du centre
-var polys=(S.polyedres||[]).map(function(p){
-  var cand=atoms.filter(function(a){return a.sp===p.sommets&&len(sub(a.f,p.centre))>EPS;}), best=Infinity;
-  cand.forEach(function(a){best=Math.min(best,len(sub(a.f,p.centre)));});
-  var V=cand.filter(function(a){return Math.abs(len(sub(a.f,p.centre))-best)<1e-4;}).map(function(a){return a.p;});
-  var faces=[], done={}, eset={}, E=[];
-  for(var i=0;i<V.length;i++)for(var j=i+1;j<V.length;j++)for(var k=j+1;k<V.length;k++){
-    var n=cross(sub(V[j],V[i]),sub(V[k],V[i])); if(len(n)<1e-9) continue; n=norm(n);
-    var pos=0,neg=0,on=[]; V.forEach(function(v,m){var d=dot(sub(v,V[i]),n); if(d>1e-6)pos++; else if(d<-1e-6)neg++; else on.push(m);});
-    if(pos&&neg) continue; var key=on.join(','); if(done[key]) continue; done[key]=1;
-    var c=[0,0,0]; on.forEach(function(m){c[0]+=V[m][0]/on.length;c[1]+=V[m][1]/on.length;c[2]+=V[m][2]/on.length;});
-    var u=norm(sub(V[on[0]],c)), w=cross(n,u);
-    on.sort(function(a,b){function ang(m){var d=sub(V[m],c);return Math.atan2(dot(d,w),dot(d,u));} return ang(a)-ang(b);});
-    faces.push(on);
-    on.forEach(function(m,q){var m2=on[(q+1)%on.length], ek=Math.min(m,m2)+'-'+Math.max(m,m2); if(!eset[ek]){eset[ek]=1;E.push([m,m2]);}});
-  }
-  return {V:V,faces:faces,E:E,sp:p.sommets};});
-var axes=[['x',[1,0,0]],['y',[0,1,0]],['z',[0,0,1]]].map(function(a){var el=h('div',{'class':'axis'}); el.textContent=a[0]; labelsEl.appendChild(el);
-  var s=P(a[1]), at=atoms.filter(function(t){return len(sub(t.f,a[1]))<EPS;})[0];
-  return {s:s,e:[s[0]+a[1][0]*.3,s[1]+a[1][1]*.3,s[2]+a[1][2]*.3],sp:at?at.sp:null,el:el};});
+// toutes les positions du cristal au voisinage de la maille (motif + translations du réseau)
+var cristal=[];
+S.motif.forEach(function(m){for(var i=-3;i<=3;i++)for(var j=-3;j<=3;j++)for(var k=-2;k<=2;k++){var f=[m[1]+i,m[2]+j,m[3]+k]; cristal.push({sp:m[0],f:f,c:cart(f)});}});
+function inHex(c,k){var s=Math.sqrt(3)/2; return [[.5,s],[-.5,s],[1,0]].every(function(u){var n=[u[1],-u[0]]; return Math.abs(c[0]*n[0]+c[1]*n[1])<=s*k+1e-4;});}
+var atoms, ghosts, links, edges, polys, axes, Rgeo, axisEls=['x','y','z'].map(function(n){var el=h('div',{'class':'axis'}); el.textContent=n; return labelsEl.appendChild(el);});
+function build(){
+  var reg=FIXE||(state.prisme?{hexagone:1,aretes:'prisme'}:{aretes:'maille'}), k=reg.hexagone||0;
+  var O=cart(k?[0,0,.5]:[.5,.5,.5]);                         // centre du dessin
+  function at(c){return sub(c,O);}
+  // atomes dessinés : ceux de la région, y compris ceux partagés sur ses sommets, arêtes et faces
+  atoms=cristal.filter(function(a){return k?(a.f[2]>-EPS&&a.f[2]<1+EPS&&inHex(a.c,k)):a.f.every(function(x){return x>-EPS&&x<1+EPS;});})
+    .map(function(a){return {sp:a.sp,f:a.f,c:a.c,p:at(a.c)};});
+  // liaisons : premiers voisins entre les espèces indiquées
+  links=[];
+  (S.liaisons||[]).forEach(function(pair){var best=Infinity, L=[];
+    atoms.forEach(function(A,i){ if(A.sp!==pair[0]) return; atoms.forEach(function(B,j){ if(B.sp!==pair[1]||i===j) return;
+      if(pair[0]===pair[1]&&j<i) return; var d=len(sub(A.c,B.c)); if(d<EPS) return; L.push({a:A,b:B,d:d}); best=Math.min(best,d);});});
+    links=links.concat(L.filter(function(l){return l.d<best*(1+TOL);}));});
+  // arêtes de la maille ou du prisme, avec les atomes posés dessus (pour interrompre le trait à leur surface)
+  var E=[];
+  if(reg.aretes==='prisme'){var hx=[[1,0],[1,1],[0,1],[-1,0],[-1,-1],[0,-1]];
+    hx.forEach(function(v,i){var w=hx[(i+1)%6]; E.push([[v[0],v[1],0],[v[0],v[1],1]],[[v[0],v[1],0],[w[0],w[1],0]],[[v[0],v[1],1],[w[0],w[1],1]]);});}
+  else [0,1,2].forEach(function(ax){[0,1].forEach(function(u){[0,1].forEach(function(v){var o=[0,0,0]; o[(ax+1)%3]=u; o[(ax+2)%3]=v; var e=o.slice(); e[ax]=1; E.push([o,e]);});});});
+  edges=E.map(function(e){var A=cart(e[0]), B=cart(e[1]), d=sub(B,A), L=len(d), on=[];
+    atoms.forEach(function(a){var w=sub(a.c,A), t=dot(w,d)/(L*L); if(t<-EPS||t>1+EPS) return;
+      if(len(sub(w,[d[0]*t,d[1]*t,d[2]*t]))<1e-4) on.push({t:t,sp:a.sp});});
+    return {a:at(A),b:at(B),L:L,on:on};});
+  // polyèdres de coordination : enveloppe convexe des plus proches voisins du centre, pris dans tout le cristal
+  ghosts=[];
+  polys=(S.polyedres||[]).map(function(p,pi){var C=cart(p.centre), best=Infinity;
+    var cand=cristal.filter(function(a){return a.sp===p.sommets&&len(sub(a.c,C))>EPS;});
+    cand.forEach(function(a){best=Math.min(best,len(sub(a.c,C)));});
+    var near=cand.filter(function(a){return len(sub(a.c,C))<best*(1+TOL);}), V=near.map(function(a){return at(a.c);});
+    near.forEach(function(a){ if(!atoms.some(function(b){return len(sub(a.c,b.c))<1e-4;})) ghosts.push({sp:a.sp,p:at(a.c),poly:pi});});
+    var faces=[], done={}, eset={}, PE=[];
+    for(var i=0;i<V.length;i++)for(var j=i+1;j<V.length;j++)for(var k2=j+1;k2<V.length;k2++){
+      var n=cross(sub(V[j],V[i]),sub(V[k2],V[i])); if(len(n)<1e-9) continue; n=norm(n);
+      var pos=0,neg=0,on=[]; V.forEach(function(v,m){var d=dot(sub(v,V[i]),n); if(d>1e-3)pos++; else if(d<-1e-3)neg++; else on.push(m);});
+      if(pos&&neg) continue; var key=on.join(','); if(done[key]) continue; done[key]=1;
+      var c=[0,0,0]; on.forEach(function(m){c[0]+=V[m][0]/on.length;c[1]+=V[m][1]/on.length;c[2]+=V[m][2]/on.length;});
+      var u=norm(sub(V[on[0]],c)), w=cross(n,u);
+      on.sort(function(a,b){function ang(m){var d=sub(V[m],c);return Math.atan2(dot(d,w),dot(d,u));} return ang(a)-ang(b);});
+      faces.push(on);
+      on.forEach(function(m,qi){var m2=on[(qi+1)%on.length], ek=Math.min(m,m2)+'-'+Math.max(m,m2); if(!eset[ek]){eset[ek]=1;PE.push([m,m2]);}});
+    }
+    return {V:V,faces:faces,E:PE,sp:p.sommets};});
+  // axes x, y, z : dans le prolongement des vecteurs de base
+  axes=[[1,0,0],[0,1,0],[0,0,1]].map(function(f,i){var c=cart(f), u=norm(c), s=at(c), a=atoms.filter(function(t){return len(sub(t.c,c))<1e-4;})[0];
+    return {s:s,e:[s[0]+u[0]*.3,s[1]+u[1]*.3,s[2]+u[2]*.3],sp:a?a.sp:null,el:axisEls[i]};});
+  Rgeo=0; atoms.forEach(function(a){Rgeo=Math.max(Rgeo,len(a.p));}); edges.forEach(function(e){Rgeo=Math.max(Rgeo,len(e.a),len(e.b));});
+  if(window.poly3d){window.poly3d.atoms=atoms; window.poly3d.links=links; window.poly3d.polys=polys; window.poly3d.ghosts=ghosts;}
+}
+build();
 
 /* ---------- Couleurs du thème ---------- */
 var col={};
@@ -135,8 +151,8 @@ var q=quatFor('free'), W=1, H=1, dpr=1, anim=null;
 function projector(){var M=mFromQ(q), pers=state.view==='free'&&state.persp, s=Math.min(W,H)/2/fit()*state.zoom, cx=W/2, cy=H/2;
   return function(p){var z=M[6]*p[0]+M[7]*p[1]+M[8]*p[2], f=(pers?DIST/(DIST-z):1)*s;
     return {x:cx+(M[0]*p[0]+M[1]*p[1]+M[2]*p[2])*f, y:cy-(M[3]*p[0]+M[4]*p[1]+M[5]*p[2])*f, z:z, f:f};};}
-// demi-largeur à faire tenir dans la vue : demi-diagonale de la maille plus le plus gros atome
-function fit(){var m=0; Object.keys(S.especes).forEach(function(sp){m=Math.max(m,radius(sp));}); return Math.max(1.2,.87+m+.06);}
+// demi-largeur à faire tenir dans la vue : rayon de la région dessinée plus le plus gros atome
+function fit(){var m=0; Object.keys(S.especes).forEach(function(sp){m=Math.max(m,radius(sp));}); return (Rgeo+m+.06)*1.06;}
 // rayon dessiné, en unités de a : rayon réel en modèle compact, réduit en modèle éclaté
 function radius(sp){var r=S.especes[sp].r/S.a; return state.model==='compact'?r:.06+.2*r;}
 
@@ -148,8 +164,8 @@ function render(){
     var t0=ra/L, t1=1-rb/L, n=Math.max(1,Math.ceil((t1-t0)*L/.25)), last=null;
     for(var i=0;i<n;i++){var A=proj(lerp(a,b,t0+(t1-t0)*i/n)), B=proj(lerp(a,b,t0+(t1-t0)*(i+1)/n));
       last={k:kind,A:A,B:B,z:(A.z+B.z)/2}; items.push(last);} return last;}
-  atoms.forEach(function(at){var s=proj(at.p); items.push({k:'atom',sp:at.sp,x:s.x,y:s.y,z:s.z,r:radius(at.sp)*s.f});});
-  edges.forEach(function(e){var cuts=e.on.map(function(o){var r=radius(o.sp);return [o.t-r,o.t+r];}).sort(function(a,b){return a[0]-b[0];}), t=0;
+  atoms.concat(ghosts.filter(function(g){return g.poly===state.poly;})).forEach(function(at){var s=proj(at.p); items.push({k:'atom',sp:at.sp,x:s.x,y:s.y,z:s.z,r:radius(at.sp)*s.f});});
+  edges.forEach(function(e){var cuts=e.on.map(function(o){var r=radius(o.sp)/e.L;return [o.t-r,o.t+r];}).sort(function(a,b){return a[0]-b[0];}), t=0;
     cuts.concat([[1,1]]).forEach(function(c){ if(c[0]>t+1e-3) seg(lerp(e.a,e.b,t),lerp(e.a,e.b,Math.min(1,c[0])),0,0,'edge'); t=Math.max(t,c[1]);});});
   if(state.model==='eclate') links.forEach(function(l){seg(l.a.p,l.b.p,radius(l.a.sp),radius(l.b.sp),'bond');});
   axes.forEach(function(ax){var it=seg(ax.s,ax.e,ax.sp?radius(ax.sp):0,0,'edge'); if(it) it.arrow=true;});
@@ -178,16 +194,17 @@ function render(){
 var FR={'1/2':'½','1/3':'⅓','2/3':'⅔','1/4':'¼','3/4':'¾','1/6':'⅙','5/6':'⅚','1/8':'⅛','3/8':'⅜','5/8':'⅝','7/8':'⅞'};
 function gcd(a,b){return b?gcd(b,a%b):a;}
 function frac(n){var g=gcd(n,24)||24,k=n/g+'/'+24/g; return n===0?'0':n===24?'1':(FR[k]||k);}
-function cote24(f,n){return Math.round(dot(f,n)/dot(n,n)*24);}
+function cote24(c,d){var v=dot(c,d)/dot(d,d); if(v<-1e-4||v>1+1e-4) v-=Math.floor(v+1e-4); return Math.round(v*24);}
 var pool=[];
 function drawCotes(proj){
   var show=state.cotes&&state.view!=='free'&&!anim, used=0;
-  if(show){var n=VIEWS[state.view].n, groups={};
+  if(show){var n=VIEWS[state.view].d, groups={};
     atoms.forEach(function(at){var s=proj(at.p), key=Math.round(s.x*4)+','+Math.round(s.y*4),
-        g=groups[key]||(groups[key]={x:s.x,y:s.y,by:{}}), z=cote24(at.f,n), L=g.by[at.sp]||(g.by[at.sp]=[]);
+        g=groups[key]||(groups[key]={x:s.x,y:s.y,by:{}}), z=cote24(at.c,n), L=g.by[at.sp]||(g.by[at.sp]=[]);
       if(L.indexOf(z)<0) L.push(z);});
+    var petit=Object.keys(groups).length>16; // étiquettes plus petites quand elles sont nombreuses
     Object.keys(groups).forEach(function(k){var g=groups[k], el=pool[used]||(pool[used]=labelsEl.appendChild(h('div',{'class':'cote'})));
-      used++; el.hidden=false; el.textContent='';
+      used++; el.hidden=false; el.textContent=''; el.style.fontSize=petit?'11px':'';
       Object.keys(S.especes).forEach(function(sp){ if(!g.by[sp]) return; var s=h('span',{}); s.style.color='var(--'+S.especes[sp].teinte+'-ink)';
         s.textContent=g.by[sp].sort(function(a,b){return a-b;}).map(frac).join(';'); el.appendChild(s);});
       el.style.left=g.x+'px'; el.style.top=g.y+'px';});}
@@ -219,13 +236,15 @@ function sync(){
   panel.querySelectorAll('[data-poly]').forEach(function(b){press(b,+b.getAttribute('data-poly')===state.poly);});
   var oc=panel.querySelector('#o-cotes'), op=panel.querySelector('#o-persp');
   press(oc,state.cotes&&state.view!=='free'); oc.disabled=state.view==='free';
-  press(op,state.persp&&state.view==='free'); op.disabled=state.view!=='free'; draw();}
+  press(op,state.persp&&state.view==='free'); op.disabled=state.view!=='free';
+  var opr=panel.querySelector('#o-prisme'); if(opr) press(opr,state.prisme); draw();}
 panel.addEventListener('click',function(e){var b=e.target.closest('button'); if(!b||b.disabled) return;
   if(b.hasAttribute('data-view')){state.view=b.getAttribute('data-view'); if(state.view==='free') state.persp=true; goTo(state.view);}
   else if(b.hasAttribute('data-model')) state.model=b.getAttribute('data-model');
   else if(b.hasAttribute('data-poly')){var i=+b.getAttribute('data-poly'); state.poly=state.poly===i?-1:i;}
   else if(b.id==='o-cotes') state.cotes=!state.cotes;
   else if(b.id==='o-persp') state.persp=!state.persp;
+  else if(b.id==='o-prisme'){state.prisme=!state.prisme; build();}
   sync();});
 
 /* ---------- Gestes : glisser = tourner, pincer ou molette = zoomer ---------- */
@@ -250,5 +269,5 @@ function setZoom(z){state.zoom=Math.max(.5,Math.min(5,z)); draw();}
 if(window.ResizeObserver) new ResizeObserver(resize).observe(stage); else window.addEventListener('resize',resize);
 if(window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyTheme);
 resize(); applyTheme(); sync();
-window.poly3d={state:state,atoms:atoms,links:links,polys:polys,project:function(p){return projector()(p);}}; // pour les contrôles
+window.poly3d={state:state,atoms:atoms,links:links,polys:polys,ghosts:ghosts,project:function(p){return projector()(p);}}; // pour les contrôles
 })();
