@@ -1,5 +1,6 @@
 /* Fiches des structures. Pour en ajouter une : copier une fiche, changer les valeurs, créer la page <id>.html.
    Coordonnées réduites dans la maille cubique ; rayons et paramètre a en picomètres.
+   Les rayons de ZnS et CaF₂ sont réduits de 3 à 4 % par rapport aux rayons ioniques tabulés, pour que cation et anion soient tangents.
    teinte : anion (vert), cation (violet), metal (bleu), carbone (gris). */
 (function(){
   // les quatre nœuds du réseau cfc, décalés de (dx,dy,dz)
@@ -16,7 +17,7 @@
 
     {id:'cfc', nom:'Cubique à faces centrées', formule:'cfc', groupe:'Fm3̄m',
      resume:'Empilement compact ABCABC. Exemple : cuivre.',
-     a:361, especes:{M:{nom:'Cu',r:128,teinte:'metal'}},
+     a:362, especes:{M:{nom:'Cu',r:128,teinte:'metal'}},
      motif:cfc('M'),
      polyedres:[{nom:'Site octaédrique',centre:[.5,.5,.5],sommets:'M'},{nom:'Site tétraédrique',centre:[.25,.25,.25],sommets:'M'}],
      infos:'Z = 4 · coordinence 12 · compacité 0,74 · 4 sites octaédriques, 8 tétraédriques'},
@@ -31,7 +32,7 @@
 
     {id:'nacl', nom:'Chlorure de sodium', formule:'NaCl', groupe:'Fm3̄m',
      resume:'Réseau cfc de Cl⁻, Na⁺ dans tous les sites octaédriques.',
-     a:564, especes:{Cl:{nom:'Cl⁻',r:181,teinte:'anion'},Na:{nom:'Na⁺',r:102,teinte:'cation'}},
+     a:564, especes:{Cl:{nom:'Cl⁻',r:181,teinte:'anion'},Na:{nom:'Na⁺',r:101,teinte:'cation'}},
      motif:cfc('Cl').concat(cfc('Na',.5,.5,.5)),
      liaisons:[['Na','Cl']],
      polyedres:[{nom:'Octaèdre NaCl₆',centre:[.5,.5,.5],sommets:'Cl'}],
@@ -39,7 +40,7 @@
 
     {id:'zns', nom:'Sulfure de zinc, blende', formule:'ZnS', groupe:'F4̄3m',
      resume:'Réseau cfc de S²⁻, Zn²⁺ dans un site tétraédrique sur deux.',
-     a:541, especes:{S:{nom:'S²⁻',r:184,teinte:'anion'},Zn:{nom:'Zn²⁺',r:60,teinte:'cation'}},
+     a:541, especes:{S:{nom:'S²⁻',r:177,teinte:'anion'},Zn:{nom:'Zn²⁺',r:57,teinte:'cation'}},
      motif:cfc('S').concat(cfc('Zn',.25,.25,.25)),
      liaisons:[['Zn','S']],
      polyedres:[{nom:'Tétraèdre ZnS₄',centre:[.25,.25,.25],sommets:'S'}],
@@ -47,7 +48,7 @@
 
     {id:'caf2', nom:'Fluorine', formule:'CaF₂', groupe:'Fm3̄m',
      resume:'Réseau cfc de Ca²⁺, F⁻ dans tous les sites tétraédriques.',
-     a:546, especes:{F:{nom:'F⁻',r:131,teinte:'anion'},Ca:{nom:'Ca²⁺',r:112,teinte:'cation'}},
+     a:546, especes:{F:{nom:'F⁻',r:127,teinte:'anion'},Ca:{nom:'Ca²⁺',r:109,teinte:'cation'}},
      motif:cfc('Ca').concat(cfc('F',.25,.25,.25),cfc('F',.75,.75,.75)),
      liaisons:[['Ca','F']],
      polyedres:[{nom:'Tétraèdre FCa₄',centre:[.25,.25,.25],sommets:'Ca'}],
