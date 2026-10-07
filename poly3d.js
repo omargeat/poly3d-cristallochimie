@@ -29,7 +29,7 @@ var header=h('header',{},'<a class="back" href="index.html">← Toutes les struc
 header.querySelector('h1').textContent=S.nom;
 header.querySelector('h1').appendChild(h('small',{})).textContent=S.formule+' · '+S.groupe;
 header.querySelector('.sub').textContent=S.resume;
-if(opt.video){var bk=header.querySelector('.back'); bk.href='scanner.html'; bk.textContent='← Scanner une autre figure';}
+if(opt.video) header.querySelector('.sub').textContent+=' Visez une autre figure pour changer de structure.';
 var stage=h('div',{'class':'stage'},'<canvas aria-label="Maille en trois dimensions"></canvas><div class="labels"></div><div class="legend"></div><div class="caption"></div>');
 var canvas=stage.querySelector('canvas'), ctx=canvas.getContext('2d'), labelsEl=stage.querySelector('.labels'), captionEl=stage.querySelector('.caption');
 Object.keys(S.especes).forEach(function(sp){var e=S.especes[sp], d=h('div',{},'<i></i><span></span> <span class="num"></span>');
@@ -42,14 +42,13 @@ var panel=h('section',{'class':'panel','aria-label':'Commandes'},
     '<button id="m-eclate" data-model="eclate">Éclaté</button><button id="m-compact" data-model="compact">Compact</button></div></div>'+
   '<div class="row"><span>Afficher</span><div class="opts" id="opts"><button id="o-cotes">Cotes</button></div></div>'+
   '<p class="facts"></p>'+
-  '<p class="help">Glisser pour tourner, molette ou pincement pour zoomer. Les boutons [uvw] donnent la projection exacte selon cette rangée, sans perspective.</p>');
+  '<p class="help">Glisser pour tourner, molette ou pincement pour zoomer, pivoter deux doigts pour tourner dans le plan de l\'écran. Les boutons [uvw] donnent la projection exacte selon cette rangée, sans perspective.</p>');
 var opts=panel.querySelector('#opts');
 (S.polyedres||[]).forEach(function(p,i){var b=h('button',{id:'o-poly'+i,'data-poly':i}); b.textContent=p.nom; opts.appendChild(b);});
 if(LARGE) opts.appendChild(h('button',{id:'o-prisme'})).textContent=LARGE.nom;
 opts.appendChild(h('button',{id:'o-persp'},'Perspective'));
 if(opt.video){ // structure dessinée par-dessus l'image de la caméra
   stage.classList.add('ar'); stage.insertBefore(opt.video,canvas);
-  opts.appendChild(h('button',{id:'o-fige'},"Figer l'image")); opts.appendChild(h('button',{id:'o-transp'},'Transparent'));
   panel.insertBefore(h('p',{'class':'facts'},'<a href="'+S.id+'.html">Ouvrir la fiche seule, sans la caméra</a>'),panel.querySelector('.help'));
 }
 panel.querySelector('.facts').textContent='a = '+S.a+' pm · '+(HEX?'c = '+S.maille.c+' pm · ':'')+S.infos;
@@ -244,19 +243,21 @@ panel.addEventListener('click',function(e){var b=e.target.closest('button'); if(
   else if(b.id==='o-cotes') state.cotes=!state.cotes;
   else if(b.id==='o-persp') state.persp=!state.persp;
   else if(b.id==='o-prisme'){state.prisme=!state.prisme; build();}
-  else if(b.id==='o-fige'){ if(opt.video.paused){var pl=opt.video.play(); if(pl&&pl.catch) pl.catch(function(){});} else opt.video.pause(); press(b,opt.video.paused);}
-  else if(b.id==='o-transp'){var tr=canvas.style.opacity!=='0.5'; canvas.style.opacity=tr?'0.5':''; press(b,tr);}
   sync();});
 
 /* ---------- Gestes : glisser = tourner, pincer ou molette = zoomer ---------- */
-var pts={}, pinch=0;
+var pts={}, pinch=0, twist=0;
 function count(){return Object.keys(pts).length;}
 function spread(){var k=Object.keys(pts);return Math.hypot(pts[k[0]].x-pts[k[1]].x,pts[k[0]].y-pts[k[1]].y);}
+function slant(){var k=Object.keys(pts);return Math.atan2(pts[k[1]].y-pts[k[0]].y,pts[k[1]].x-pts[k[0]].x);}
 stage.addEventListener('pointerdown',function(e){pts[e.pointerId]={x:e.clientX,y:e.clientY};
-  try{stage.setPointerCapture(e.pointerId);}catch(_){ } stage.classList.add('dragging'); if(count()===2) pinch=spread();});
+  try{stage.setPointerCapture(e.pointerId);}catch(_){ } stage.classList.add('dragging'); if(count()===2){pinch=spread(); twist=slant();}});
 stage.addEventListener('pointermove',function(e){var p=pts[e.pointerId]; if(!p) return;
   var dx=e.clientX-p.x, dy=e.clientY-p.y; p.x=e.clientX; p.y=e.clientY;
-  if(count()===2){var s=spread(); if(pinch>0) setZoom(state.zoom*s/pinch); pinch=s; return;}
+  if(count()===2){ // deux doigts : l'écart règle le zoom, le pivotement fait tourner autour de l'axe de visée
+    var s=spread(), a=slant(), da=a-twist; if(da>Math.PI) da-=2*Math.PI; else if(da<-Math.PI) da+=2*Math.PI;
+    if(pinch>0){anim=null; q=qNorm(qMul([0,0,Math.sin(-da/2),Math.cos(-da/2)],q)); setZoom(state.zoom*s/pinch);}
+    pinch=s; twist=a; return;}
   if(count()!==1||(!dx&&!dy)) return;
   if(state.view!=='free'){state.view='free';state.persp=false;sync();} // on quitte l'axe en restant sans perspective
   anim=null; var l=Math.hypot(dx,dy), hf=l*.004, sn=Math.sin(hf)/l;
@@ -267,15 +268,16 @@ stage.addEventListener('wheel',function(e){e.preventDefault(); setZoom(state.zoo
 function setZoom(z){state.zoom=Math.max(.5,Math.min(5,z)); draw();}
 
 /* ---------- Démarrage ---------- */
-if(window.ResizeObserver) new ResizeObserver(resize).observe(stage); else window.addEventListener('resize',resize);
+var ro=null; if(window.ResizeObserver){ro=new ResizeObserver(resize); ro.observe(stage);} else window.addEventListener('resize',resize);
 if(window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyTheme);
 resize(); applyTheme(); sync();
 window.poly3d={state:state,atoms:atoms,links:links,polys:polys,ghosts:ghosts,project:function(p){return projector()(p);}}; // pour les contrôles
+return {el:app,touching:function(){return count()>0;},close:function(){ if(ro) ro.disconnect(); app.remove();}};
 }
 
 /* ---------- Démarrage selon la page ---------- */
 function find(id){return ALL.filter(function(s){return s.id===id;})[0];}
-window.Poly3D={open:function(id,opt){var S=find(id); if(S) viewer(S,opt); return !!S;}};
+window.Poly3D={open:function(id,opt){var S=find(id); return S?viewer(S,opt):null;}};
 var id=document.body.getAttribute('data-structure'), ul=document.getElementById('liste');
 if(id){ if(!window.Poly3D.open(id)) document.body.textContent='Structure inconnue : '+id; }
 else if(ul) ALL.forEach(function(s){var li=document.createElement('li'), a=document.createElement('a');   // page d'accueil
