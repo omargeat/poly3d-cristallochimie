@@ -13,6 +13,12 @@ Site : https://omargeat.github.io/poly3d-cristallochimie/
 - `index.html` : la page d'accueil, qui liste les fiches.
 - `<id>.html` : une page par structure, qui ne contient que le nom de la fiche à afficher.
 
+## Scanner une figure du poly
+
+- `scanner.html` et `scanner.js` : la page qui ouvre la caméra.
+- `reco.js` : la reconnaissance de la page visée (points d'intérêt, appariement, vérification géométrique), sans bibliothèque externe.
+- `reco-data.js` : les points de repère des pages du poly, produits par `tools/build-reco.js` à partir du PDF du cours.
+
 ## Ajouter une structure
 
 1. Ajouter une fiche dans `structures.js`.

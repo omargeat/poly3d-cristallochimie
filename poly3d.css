@@ -19,6 +19,7 @@
   }
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{height:100%;margin:0}
 body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);font-size:15px;line-height:1.4;padding:0 16px}
 .app{height:100%;max-width:1180px;margin:0 auto;padding:12px 0;display:grid;gap:10px;
@@ -75,3 +76,15 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
 .home li a:hover{border-color:var(--accent)}
 .home li small{display:block;color:var(--muted)}
 .home li code{font-family:var(--font-mono);font-size:.8rem;color:var(--muted);margin-left:6px}
+/* scanner : reconnaissance d'une figure du poly par la caméra */
+.scan{background:#0c1014;cursor:default;touch-action:auto}
+.scan video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.scan .viseur{position:absolute;left:50%;top:50%;width:min(62%,300px);aspect-ratio:1;transform:translate(-50%,-50%);border:2px solid rgba(255,255,255,.8);border-radius:10px;pointer-events:none}
+.scan .etat{position:absolute;left:10px;right:10px;bottom:10px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.scan .msg{background:rgba(12,16,20,.82);color:#fff;padding:8px 14px;border-radius:999px;font-size:.9rem;max-width:100%}
+.scan .msg.ok{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.scan .mesure{font-family:var(--font-mono);font-size:.7rem;color:rgba(255,255,255,.7)}
+.scan .start{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:#fff}
+.scan .start button,.lien{border:0;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:600;padding:12px 20px;border-radius:999px;cursor:pointer;text-decoration:none;display:inline-block}
+.scan .start p{margin:0 0 14px;max-width:32ch}
+.home .lien{margin:0 0 24px}
