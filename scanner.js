@@ -28,22 +28,24 @@ function show(id){ // affiche la structure par-dessus la caméra ; la précéden
 function onResult(e){var r=e.data; busy=false;
   if(r.id&&r.id===candidat) suite++; else {candidat=r.id; suite=r.id?1:0;}
   if(!vue){mesure.textContent=''; msg.className='msg'; msg.textContent=r.id?'Figure repérée, ne bougez plus…':'Recherche d\'une figure…';}
-  // première structure : deux reconnaissances de suite ; changement de structure : trois, pour éviter les sauts intempestifs
-  if(candidat&&candidat!==courant&&suite>=(vue?3:2)&&!(vue&&vue.touching())){
+  // deux reconnaissances de suite sont demandées, pour afficher une structure comme pour en changer
+  if(candidat&&candidat!==courant&&suite>=2&&!(vue&&vue.touching())){
     if(!vue){msg.className='msg ok'; msg.textContent=(NOMS[candidat]||candidat)+' reconnu';}
     show(candidat); candidat=null; suite=0;}
   next(vue&&!candidat?900:150);   // une analyse par seconde environ une fois la structure affichée, plus vite pendant une confirmation
 }
+var lance=false;
 function run(){
+  if(lance) return; lance=true;
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){fail('Ce navigateur ne donne pas accès à la caméra.'); return;}
   navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}}).then(function(stream){
     video.srcObject=stream; start.hidden=true; etat.hidden=false; viseur.hidden=false;
     if(!worker){worker=new Worker('reco.js'); worker.onmessage=onResult; worker.onerror=function(){ if(!vue) fail('La reconnaissance n\'a pas pu démarrer.');};}
     var p=video.play(); if(p&&p.catch) p.catch(function(){});
     busy=false; next(0);
-  }).catch(function(){fail('La caméra n\'est pas accessible. Autorisez-la dans le navigateur, ou choisissez la structure dans la liste.');});
+  }).catch(function(){lance=false; fail('La caméra n\'est pas accessible. Autorisez-la dans le navigateur, ou choisissez la structure dans la liste.');});
 }
 document.getElementById('go').addEventListener('click',run);
-// caméra déjà autorisée : on démarre sans redemander
-if(navigator.permissions&&navigator.permissions.query) navigator.permissions.query({name:'camera'}).then(function(s){ if(s.state==='granted') run();}).catch(function(){});
+// caméra déjà autorisée : on démarre sans redemander, après avoir laissé le temps de lire le message
+if(navigator.permissions&&navigator.permissions.query) navigator.permissions.query({name:'camera'}).then(function(s){ if(s.state==='granted') setTimeout(run,1500);}).catch(function(){});
 })();
