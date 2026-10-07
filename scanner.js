@@ -32,7 +32,7 @@ function onResult(e){var r=e.data; busy=false;
   if(candidat&&candidat!==courant&&suite>=2&&!(vue&&vue.touching())){
     if(!vue){msg.className='msg ok'; msg.textContent=(NOMS[candidat]||candidat)+' reconnu';}
     show(candidat); candidat=null; suite=0;}
-  next(vue&&!candidat?900:150);   // une analyse par seconde environ une fois la structure affichée, plus vite pendant une confirmation
+  next(vue&&!candidat?450:150);   // environ deux analyses par seconde une fois la structure affichée, plus vite pendant une confirmation
 }
 var lance=false;
 function run(){
