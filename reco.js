@@ -117,7 +117,7 @@ function recognize(gray,w,h,refs,nmax){var q=extract(gray,w,h,nmax||700), res=re
   cands.sort(function(a,b){return (a.d-b.d)||(b.r.inliers-a.r.inliers);});
   var best=cands[0], others=res.filter(function(r){return visibles.indexOf(r)<0;});
   if(others.length&&best.r.inliers<2*others[0].inliers) return out;   // pas assez net par rapport aux pages non retenues
-  out.page=best.r.ref.page; out.inliers=best.r.inliers; out.centre=best.c;
+  out.page=best.r.ref.page; out.inliers=best.r.inliers; out.centre=best.c; out.H=best.r.H;
   var bd=Infinity; best.r.ref.zones.forEach(function(z){var d=dist(z,best.c); if(d<bd){bd=d;out.id=z.id;}});
   return out;}
 
@@ -140,6 +140,8 @@ if(typeof importScripts==='function'){
     if(!REFS){importScripts('reco-data.js'); REFS=root.POLY3D_RECO_DATA.map(function(r){var f=unpack(r); f.page=r.page; f.zones=r.zones; f.w=r.w; f.h=r.h; return f;});}
     var t=Date.now(), rgba=d.rgba, n=d.w*d.h, g=new Uint8Array(n);
     for(var i=0;i<n;i++) g[i]=(rgba[i*4]*77+rgba[i*4+1]*150+rgba[i*4+2]*29)>>8;
-    var r=recognize(g,d.w,d.h,REFS,700); r.ms=Date.now()-t; root.postMessage(r);};
+    // d.only : ne chercher qu'une page (suivi d'une figure déjà reconnue, plus rapide)
+    var refs=d.only?REFS.filter(function(f){return f.page===d.only;}):REFS;
+    var r=recognize(g,d.w,d.h,refs,d.nmax||700); r.ms=Date.now()-t; r.only=d.only||0; root.postMessage(r);};
 }
 })(typeof self!=='undefined'?self:this);

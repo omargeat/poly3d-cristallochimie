@@ -50,6 +50,9 @@ opts.appendChild(h('button',{id:'o-persp'},'Perspective'));
 if(opt.video){ // structure dessinée par-dessus l'image de la caméra
   stage.classList.add('ar'); stage.insertBefore(opt.video,canvas);
   panel.insertBefore(h('p',{'class':'facts'},'<a href="'+S.id+'.html">Ouvrir la fiche seule, sans la caméra</a>'),panel.querySelector('.help'));
+  if(opt.labo){ // page labo : interrupteurs des mouvements à l'essai
+    var row=h('div',{'class':'row'},'<span>Labo</span><div class="opts"><button id="l-suivre">Suivre la figure</button><button id="l-tourner">Tourner avec la feuille</button></div>');
+    panel.insertBefore(row,panel.querySelector('.facts'));}
 }
 panel.querySelector('.facts').textContent='a = '+S.a+' pm · '+(HEX?'c = '+S.maille.c+' pm · ':'')+S.infos;
 app.appendChild(header); app.appendChild(stage); app.appendChild(panel); document.body.appendChild(app);
@@ -146,7 +149,17 @@ function applyTheme(){Object.keys(S.especes).forEach(function(sp){var c=rgb(css(
 
 /* ---------- Projection : orthographique exacte, ou perspective en vue libre ---------- */
 var q=quatFor('free'), W=1, H=1, dpr=1, anim=null;
-function projector(){var M=mFromQ(q), pers=state.view==='free'&&state.persp, s=Math.min(W,H)/2/fit()*state.zoom, cx=W/2, cy=H/2;
+// ancre (page labo) : position, taille et angle de la figure du poly à l'écran, que la structure rejoint en douceur
+var anchor=null, ancT=null, ancLoop=false;
+function setAnchor(a){ancT=a; if(a&&!anchor) anchor={x:a.x,y:a.y,s:a.s,r:a.r}; if(!ancLoop){ancLoop=true; requestAnimationFrame(ancStep);}}
+function ancStep(){ancLoop=false; if(!anchor) return;
+  var t=ancT||{x:W/2,y:H/2,s:Math.min(W,H)/2/fit(),r:0}, k=.22, dr=t.r-anchor.r; while(dr>Math.PI) dr-=2*Math.PI; while(dr<-Math.PI) dr+=2*Math.PI;
+  anchor.x+=(t.x-anchor.x)*k; anchor.y+=(t.y-anchor.y)*k; anchor.s+=(t.s-anchor.s)*k; anchor.r+=dr*k;
+  var fini=Math.abs(t.x-anchor.x)<.3&&Math.abs(t.y-anchor.y)<.3&&Math.abs(t.s-anchor.s)<.2&&Math.abs(dr)<.003;
+  if(fini&&!ancT) anchor=null; render(); if(!fini){ancLoop=true; requestAnimationFrame(ancStep);}}
+function projector(){var pers=state.view==='free'&&state.persp, s=Math.min(W,H)/2/fit()*state.zoom, cx=W/2, cy=H/2, qq=q;
+  if(anchor){cx=anchor.x; cy=anchor.y; s=anchor.s*state.zoom; qq=qMul([0,0,Math.sin(-anchor.r/2),Math.cos(-anchor.r/2)],q);}
+  var M=mFromQ(qq);
   return function(p){var z=M[6]*p[0]+M[7]*p[1]+M[8]*p[2], f=(pers?DIST/(DIST-z):1)*s;
     return {x:cx+(M[0]*p[0]+M[1]*p[1]+M[2]*p[2])*f, y:cy-(M[3]*p[0]+M[4]*p[1]+M[5]*p[2])*f, z:z, f:f};};}
 // demi-largeur à faire tenir dans la vue : rayon de la région dessinée plus le plus gros atome
@@ -235,7 +248,8 @@ function sync(){
   var oc=panel.querySelector('#o-cotes'), op=panel.querySelector('#o-persp');
   press(oc,state.cotes&&state.view!=='free'); oc.disabled=state.view==='free';
   press(op,state.persp&&state.view==='free'); op.disabled=state.view!=='free';
-  var opr=panel.querySelector('#o-prisme'); if(opr) press(opr,state.prisme); draw();}
+  var opr=panel.querySelector('#o-prisme'); if(opr) press(opr,state.prisme);
+  if(opt.labo){press(panel.querySelector('#l-suivre'),opt.labo.suivre); press(panel.querySelector('#l-tourner'),opt.labo.tourner);} draw();}
 panel.addEventListener('click',function(e){var b=e.target.closest('button'); if(!b||b.disabled) return;
   if(b.hasAttribute('data-view')){state.view=b.getAttribute('data-view'); if(state.view==='free') state.persp=true; goTo(state.view);}
   else if(b.hasAttribute('data-model')) state.model=b.getAttribute('data-model');
@@ -243,6 +257,8 @@ panel.addEventListener('click',function(e){var b=e.target.closest('button'); if(
   else if(b.id==='o-cotes') state.cotes=!state.cotes;
   else if(b.id==='o-persp') state.persp=!state.persp;
   else if(b.id==='o-prisme'){state.prisme=!state.prisme; build();}
+  else if(b.id==='l-suivre') opt.labo.suivre=!opt.labo.suivre;
+  else if(b.id==='l-tourner') opt.labo.tourner=!opt.labo.tourner;
   sync();});
 
 /* ---------- Gestes : glisser = tourner, pincer ou molette = zoomer ---------- */
@@ -272,7 +288,7 @@ var ro=null; if(window.ResizeObserver){ro=new ResizeObserver(resize); ro.observe
 if(window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyTheme);
 resize(); applyTheme(); sync();
 window.poly3d={state:state,atoms:atoms,links:links,polys:polys,ghosts:ghosts,project:function(p){return projector()(p);}}; // pour les contrôles
-return {el:app,touching:function(){return count()>0;},close:function(){ if(ro) ro.disconnect(); app.remove();}};
+return {el:app,stage:stage,size:function(){return [W,H];},setAnchor:setAnchor,touching:function(){return count()>0;},close:function(){ if(ro) ro.disconnect(); app.remove();}};
 }
 
 /* ---------- Démarrage selon la page ---------- */
