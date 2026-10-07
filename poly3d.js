@@ -24,7 +24,8 @@ var FREE=HEX?{n:[.5,-1,.45],up:[0,0,1]}:{n:[1,.5,.4],up:[0,0,1]};
 var AXES=HEX?[{id:'001',uvw:[0,0,1],up:[0,1,0],period:'c'},{id:'100',uvw:[1,0,0],up:[0,0,1],period:'a'},{id:'120',uvw:[1,2,0],up:[0,0,1],period:'a√3'}]
             :[{id:'001',uvw:[0,0,1],up:[-1,0,0],period:'a'},{id:'110',uvw:[1,1,0],up:[0,0,1],period:'a√2'},{id:'111',uvw:[1,1,1],up:[0,0,1],period:'a√3'}];
 var VIEWS={free:FREE}; AXES.forEach(function(v){v.d=cart(v.uvw); v.n=v.d; VIEWS[v.id]=v;});
-var FIXE=S.region||null; // région imposée par la fiche (graphite)
+// vue élargie proposée par un bouton : celle de la fiche, sinon le prisme hexagonal (maille triple)
+var LARGE=S.etendu||(HEX?{nom:'Prisme hexagonal',hexagone:1,aretes:'prisme'}:null);
 var state={view:'free',model:'eclate',cotes:true,poly:-1,persp:true,zoom:1,prisme:false};
 var DIST=5, EPS=1e-6, TOL=.02;
 
@@ -51,7 +52,7 @@ var panel=h('section',{'class':'panel','aria-label':'Commandes'},
   '<p class="help">Glisser pour tourner, molette ou pincement pour zoomer. Les boutons [uvw] donnent la projection exacte selon cette rangée, sans perspective.</p>');
 var opts=panel.querySelector('#opts');
 (S.polyedres||[]).forEach(function(p,i){var b=h('button',{id:'o-poly'+i,'data-poly':i}); b.textContent=p.nom; opts.appendChild(b);});
-if(HEX&&!FIXE) opts.appendChild(h('button',{id:'o-prisme'},'Prisme hexagonal'));
+if(LARGE) opts.appendChild(h('button',{id:'o-prisme'})).textContent=LARGE.nom;
 opts.appendChild(h('button',{id:'o-persp'},'Perspective'));
 panel.querySelector('.facts').textContent='a = '+S.a+' pm · '+(HEX?'c = '+S.maille.c+' pm · ':'')+S.infos;
 app.appendChild(header); app.appendChild(stage); app.appendChild(panel); document.body.appendChild(app);
@@ -89,7 +90,7 @@ S.motif.forEach(function(m){for(var i=-3;i<=3;i++)for(var j=-3;j<=3;j++)for(var 
 function inHex(c,k){var s=Math.sqrt(3)/2; return [[.5,s],[-.5,s],[1,0]].every(function(u){var n=[u[1],-u[0]]; return Math.abs(c[0]*n[0]+c[1]*n[1])<=s*k+1e-4;});}
 var atoms, ghosts, links, edges, polys, axes, Rgeo, axisEls=['x','y','z'].map(function(n){var el=h('div',{'class':'axis'}); el.textContent=n; return labelsEl.appendChild(el);});
 function build(){
-  var reg=FIXE||(state.prisme?{hexagone:1,aretes:'prisme'}:{aretes:'maille'}), k=reg.hexagone||0;
+  var reg=state.prisme?LARGE:{aretes:'maille'}, k=reg.hexagone||0;
   var O=cart(k?[0,0,.5]:[.5,.5,.5]);                         // centre du dessin
   function at(c){return sub(c,O);}
   // atomes dessinés : ceux de la région, y compris ceux partagés sur ses sommets, arêtes et faces

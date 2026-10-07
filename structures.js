@@ -1,6 +1,7 @@
 /* Fiches des structures. Pour en ajouter une : copier une fiche, changer les valeurs, créer la page <id>.html.
    Coordonnées réduites dans la maille ; rayons et paramètres a, c en picomètres.
    Maille cubique par défaut ; maille:{type:'hex',c:...} pour une maille hexagonale (a, a, c, 120°).
+   Une maille hexagonale a un bouton « Prisme hexagonal » (maille triple), sauf si la fiche définit une autre vue élargie avec etendu:{...}.
    Les rayons de ZnS et CaF₂ sont réduits de 3 à 4 % par rapport aux rayons ioniques tabulés, pour que cation et anion soient tangents.
    teinte : anion (vert), cation (violet), metal (bleu), carbone (gris). */
 (function(){
@@ -26,8 +27,8 @@
     {id:'hc', nom:'Hexagonal compact', formule:'hc', groupe:'P6₃/mmc',
      resume:'Empilement compact ABAB. Exemple : magnésium, avec le rapport c/a idéal.',
      a:321, maille:{type:'hex',c:524}, especes:{M:{nom:'Mg',r:160,teinte:'metal'}},
-     motif:[['M',0,0,0],['M',1/3,2/3,.5]],
-     polyedres:[{nom:'Site octaédrique',centre:[2/3,1/3,.25],sommets:'M'},{nom:'Site tétraédrique',centre:[1/3,2/3,.125],sommets:'M'}],
+     motif:[['M',0,0,0],['M',2/3,1/3,.5]],
+     polyedres:[{nom:'Site octaédrique',centre:[1/3,2/3,.25],sommets:'M'},{nom:'Site tétraédrique',centre:[2/3,1/3,.125],sommets:'M'}],
      infos:'Z = 2 (maille simple) · coordinence 12 · compacité 0,74 · c/a = 1,633'},
 
     {id:'cscl', nom:'Chlorure de césium', formule:'CsCl', groupe:'Pm3̄m',
@@ -57,9 +58,9 @@
     {id:'wurtzite', nom:'Sulfure de zinc, wurtzite', formule:'ZnS', groupe:'P6₃mc',
      resume:'Réseau hc de S²⁻, Zn²⁺ dans un site tétraédrique sur deux.',
      a:382, maille:{type:'hex',c:626}, especes:{S:{nom:'S²⁻',r:177,teinte:'anion'},Zn:{nom:'Zn²⁺',r:57,teinte:'cation'}},
-     motif:[['S',0,0,0],['S',1/3,2/3,.5],['Zn',0,0,.375],['Zn',1/3,2/3,.875]],
+     motif:[['S',0,0,0],['S',2/3,1/3,.5],['Zn',0,0,.375],['Zn',2/3,1/3,.875]],
      liaisons:[['Zn','S']],
-     polyedres:[{nom:'Tétraèdre ZnS₄',centre:[1/3,2/3,.875],sommets:'S'}],
+     polyedres:[{nom:'Tétraèdre ZnS₄',centre:[2/3,1/3,.875],sommets:'S'}],
      infos:'Z = 2 ZnS par maille · coordinence 4:4'},
 
     {id:'caf2', nom:'Fluorine', formule:'CaF₂', groupe:'Fm3̄m',
@@ -83,7 +84,7 @@
      a:246, maille:{type:'hex',c:680}, especes:{C:{nom:'C',r:71,teinte:'carbone'}},
      motif:[['C',0,0,0],['C',1/3,2/3,0],['C',0,0,.5],['C',2/3,1/3,.5]],
      liaisons:[['C','C']],
-     region:{hexagone:1.34,aretes:'maille'},
+     etendu:{nom:'Feuillets étendus',hexagone:1.34,aretes:'maille'},
      infos:'Z = 4 · C–C = 142 pm dans le feuillet · 340 pm entre feuillets'}
   ];
 })();
