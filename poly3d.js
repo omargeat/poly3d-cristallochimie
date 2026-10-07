@@ -1,21 +1,13 @@
 /* Poly3D Cristallochimie : moteur commun.
    Lit la fiche désignée par <body data-structure="...">, construit la page et dessine la maille.
+   Le scanner l'appelle aussi avec Poly3D.open(id,{video:...}) pour dessiner la structure par-dessus l'image de la caméra.
    Aucune bibliothèque externe : le dessin est fait sur un canvas 2D, les atomes triés du plus loin au plus proche. */
 (function(){
 'use strict';
-var ALL=window.POLY3D_STRUCTURES||[], id=document.body.getAttribute('data-structure');
+var ALL=window.POLY3D_STRUCTURES||[];
 
-/* ---------- Page d'accueil ---------- */
-if(!id){
-  var ul=document.getElementById('liste');
-  if(ul) ALL.forEach(function(s){var li=document.createElement('li'), a=document.createElement('a');
-    a.href=s.id+'.html'; a.textContent=s.nom; var c=document.createElement('code'); c.textContent=s.formule; a.appendChild(c);
-    var sm=document.createElement('small'); sm.textContent=s.resume; a.appendChild(sm); li.appendChild(a); ul.appendChild(li);});
-  return;
-}
-var S=ALL.filter(function(s){return s.id===id;})[0];
-if(!S){document.body.textContent='Structure inconnue : '+id; return;}
-
+function viewer(S,opt){
+opt=opt||{};
 var HEX=S.maille&&S.maille.type==='hex', CA=HEX?S.maille.c/S.a:1;
 // coordonnées réduites -> cartésiennes, en unités de a
 function cart(f){return HEX?[f[0]-f[1]/2,f[1]*Math.sqrt(3)/2,f[2]*CA]:[f[0],f[1],f[2]];}
@@ -30,13 +22,14 @@ var state={view:'free',model:'eclate',cotes:true,poly:-1,persp:true,zoom:1,prism
 var DIST=5, EPS=1e-6, TOL=.02;
 
 /* ---------- Construction de la page ---------- */
-document.title='Poly3D '+S.formule;
+if(!opt.video) document.title='Poly3D '+S.formule;
 function h(tag,attrs,html){var e=document.createElement(tag); for(var k in attrs) e.setAttribute(k,attrs[k]); if(html!=null) e.innerHTML=html; return e;}
 var app=h('div',{'class':'app'});
 var header=h('header',{},'<a class="back" href="index.html">← Toutes les structures</a><h1></h1><p class="sub"></p>');
 header.querySelector('h1').textContent=S.nom;
 header.querySelector('h1').appendChild(h('small',{})).textContent=S.formule+' · '+S.groupe;
 header.querySelector('.sub').textContent=S.resume;
+if(opt.video){var bk=header.querySelector('.back'); bk.href='scanner.html'; bk.textContent='← Scanner une autre figure';}
 var stage=h('div',{'class':'stage'},'<canvas aria-label="Maille en trois dimensions"></canvas><div class="labels"></div><div class="legend"></div><div class="caption"></div>');
 var canvas=stage.querySelector('canvas'), ctx=canvas.getContext('2d'), labelsEl=stage.querySelector('.labels'), captionEl=stage.querySelector('.caption');
 Object.keys(S.especes).forEach(function(sp){var e=S.especes[sp], d=h('div',{},'<i></i><span></span> <span class="num"></span>');
@@ -54,6 +47,11 @@ var opts=panel.querySelector('#opts');
 (S.polyedres||[]).forEach(function(p,i){var b=h('button',{id:'o-poly'+i,'data-poly':i}); b.textContent=p.nom; opts.appendChild(b);});
 if(LARGE) opts.appendChild(h('button',{id:'o-prisme'})).textContent=LARGE.nom;
 opts.appendChild(h('button',{id:'o-persp'},'Perspective'));
+if(opt.video){ // structure dessinée par-dessus l'image de la caméra
+  stage.classList.add('ar'); stage.insertBefore(opt.video,canvas);
+  opts.appendChild(h('button',{id:'o-fige'},"Figer l'image")); opts.appendChild(h('button',{id:'o-transp'},'Transparent'));
+  panel.insertBefore(h('p',{'class':'facts'},'<a href="'+S.id+'.html">Ouvrir la fiche seule, sans la caméra</a>'),panel.querySelector('.help'));
+}
 panel.querySelector('.facts').textContent='a = '+S.a+' pm · '+(HEX?'c = '+S.maille.c+' pm · ':'')+S.infos;
 app.appendChild(header); app.appendChild(stage); app.appendChild(panel); document.body.appendChild(app);
 
@@ -140,7 +138,7 @@ build();
 
 /* ---------- Couleurs du thème ---------- */
 var col={};
-function css(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+function css(n){return getComputedStyle(stage).getPropertyValue(n).trim();}
 function rgb(hx){hx=hx.replace('#','');return [parseInt(hx.substr(0,2),16),parseInt(hx.substr(2,2),16),parseInt(hx.substr(4,2),16)];}
 function mix(c,t,k){return 'rgb('+c.map(function(v,i){return Math.round(v+(t[i]-v)*k);}).join(',')+')';}
 function applyTheme(){Object.keys(S.especes).forEach(function(sp){var c=rgb(css('--'+S.especes[sp].teinte));
@@ -246,6 +244,8 @@ panel.addEventListener('click',function(e){var b=e.target.closest('button'); if(
   else if(b.id==='o-cotes') state.cotes=!state.cotes;
   else if(b.id==='o-persp') state.persp=!state.persp;
   else if(b.id==='o-prisme'){state.prisme=!state.prisme; build();}
+  else if(b.id==='o-fige'){ if(opt.video.paused){var pl=opt.video.play(); if(pl&&pl.catch) pl.catch(function(){});} else opt.video.pause(); press(b,opt.video.paused);}
+  else if(b.id==='o-transp'){var tr=canvas.style.opacity!=='0.5'; canvas.style.opacity=tr?'0.5':''; press(b,tr);}
   sync();});
 
 /* ---------- Gestes : glisser = tourner, pincer ou molette = zoomer ---------- */
@@ -271,4 +271,14 @@ if(window.ResizeObserver) new ResizeObserver(resize).observe(stage); else window
 if(window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyTheme);
 resize(); applyTheme(); sync();
 window.poly3d={state:state,atoms:atoms,links:links,polys:polys,ghosts:ghosts,project:function(p){return projector()(p);}}; // pour les contrôles
+}
+
+/* ---------- Démarrage selon la page ---------- */
+function find(id){return ALL.filter(function(s){return s.id===id;})[0];}
+window.Poly3D={open:function(id,opt){var S=find(id); if(S) viewer(S,opt); return !!S;}};
+var id=document.body.getAttribute('data-structure'), ul=document.getElementById('liste');
+if(id){ if(!window.Poly3D.open(id)) document.body.textContent='Structure inconnue : '+id; }
+else if(ul) ALL.forEach(function(s){var li=document.createElement('li'), a=document.createElement('a');   // page d'accueil
+  a.href=s.id+'.html'; a.textContent=s.nom; var c=document.createElement('code'); c.textContent=s.formule; a.appendChild(c);
+  var sm=document.createElement('small'); sm.textContent=s.resume; a.appendChild(sm); li.appendChild(a); ul.appendChild(li);});
 })();

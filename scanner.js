@@ -1,5 +1,6 @@
 /* Poly3D Cristallochimie : page scanner. La caméra envoie environ deux images par seconde au module de reconnaissance
-   (reco.js, dans un worker). Quand deux images de suite désignent la même structure, sa page s'ouvre. */
+   (reco.js, dans un worker). Quand deux images de suite désignent la même structure, elle s'affiche en 3D
+   par-dessus l'image de la caméra, à tourner au doigt. */
 (function(){
 'use strict';
 var video=document.getElementById('video'), msg=document.getElementById('msg'), mesure=document.getElementById('mesure'),
@@ -19,7 +20,10 @@ function tick(){
 function onResult(e){var r=e.data; busy=false; if(done) return;
   mesure.textContent=r.inliers+' points concordants · '+r.ms+' ms';
   if(r.id&&r.id===last){done=true; msg.className='msg ok'; msg.textContent=(NOMS[r.id]||r.id)+' reconnu';
-    setTimeout(function(){location.href=r.id+'.html';},700); return;}
+    setTimeout(function(){ // la visionneuse remplace le scanner et récupère l'image de la caméra comme fond
+      worker.terminate(); worker=null; var old=document.querySelector('.app');
+      if(window.Poly3D&&window.Poly3D.open(r.id,{video:video})){old.remove(); var p=video.play(); if(p&&p.catch) p.catch(function(){});}
+      else location.href=r.id+'.html';},600); return;}
   last=r.id; msg.className='msg'; msg.textContent=r.id?'Figure repérée, ne bougez plus…':'Recherche d\'une figure…';
   timer=setTimeout(tick,120);
 }
@@ -33,6 +37,6 @@ function run(){
   }).catch(function(){fail('La caméra n\'est pas accessible. Autorisez-la dans le navigateur, ou choisissez la structure dans la liste.');});
 }
 document.getElementById('go').addEventListener('click',run);
-// retour depuis une structure (bouton Précédent) : on repart à zéro
-window.addEventListener('pageshow',function(e){ if(e.persisted&&video.srcObject){done=false; busy=false; last=null; msg.className='msg'; msg.textContent='Recherche d\'une figure…'; clearTimeout(timer); tick();}});
+// caméra déjà autorisée (retour depuis une structure) : on démarre sans redemander
+if(navigator.permissions&&navigator.permissions.query) navigator.permissions.query({name:'camera'}).then(function(s){ if(s.state==='granted') run();}).catch(function(){});
 })();

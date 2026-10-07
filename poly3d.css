@@ -88,3 +88,14 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
 .scan .start button,.lien{border:0;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:600;padding:12px 20px;border-radius:999px;cursor:pointer;text-decoration:none;display:inline-block}
 .scan .start p{margin:0 0 14px;max-width:32ch}
 .home .lien{margin:0 0 24px}
+/* structure par-dessus l'image de la caméra : couleurs claires imposées, car le fond est la feuille de papier */
+.stage.ar{background:#0c1014;
+  --surface:#ffffff; --ink:#16212e; --muted:#3d4a59; --rule:#d3dae2;
+  --anion:#2f9a4d; --anion-ink:#1d6b33; --cation:#7d4fd0; --cation-ink:#5a33a8;
+  --metal:#4f7fb8; --metal-ink:#2f5c92; --carbone:#69737f; --carbone-ink:#3d4650;
+  --edge:#16212e; --bond:#6f7b88; --poly:#e0862a}
+.stage.ar video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.stage.ar .legend,.stage.ar .caption{background:rgba(255,255,255,.85);color:var(--ink);padding:4px 8px;border-radius:6px}
+.stage.ar .caption{right:auto}
+.stage.ar .axis{color:var(--ink);text-shadow:0 0 3px #fff,0 0 3px #fff}
+.facts a{color:var(--accent)}
