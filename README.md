@@ -19,6 +19,11 @@ Site : https://omargeat.github.io/poly3d-cristallochimie/
 - `reco.js` : la reconnaissance de la page visée (points d'intérêt, appariement, vérification géométrique), sans bibliothèque externe.
 - `reco-data.js` : les points de repère des pages du poly, produits par `tools/build-reco.js` à partir du PDF du cours.
 
+## Numéro de version des fichiers
+
+Les pages appellent leurs fichiers avec un numéro (`poly3d.js?v=9`). Il faut l'augmenter partout à chaque modification,
+sinon un téléphone peut garder une ancienne version en mémoire et afficher une page à moitié à jour.
+
 ## Ajouter une structure
 
 1. Ajouter une fiche dans `structures.js`.

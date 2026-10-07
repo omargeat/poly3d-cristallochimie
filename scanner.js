@@ -42,7 +42,7 @@ function run(){
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){fail('Ce navigateur ne donne pas accès à la caméra.'); return;}
   navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}}).then(function(stream){
     video.srcObject=stream; start.hidden=true; etat.hidden=false; viseur.hidden=false;
-    if(!worker){worker=new Worker('reco.js'); worker.onmessage=onResult; worker.onerror=function(){ if(!vue) fail('La reconnaissance n\'a pas pu démarrer.');};}
+    if(!worker){worker=new Worker('reco.js?v=9'); worker.onmessage=onResult; worker.onerror=function(){ if(!vue) fail('La reconnaissance n\'a pas pu démarrer.');};}
     var p=video.play(); if(p&&p.catch) p.catch(function(){});
     busy=false; next(0);
   }).catch(function(){lance=false; fail('La caméra n\'est pas accessible. Autorisez-la dans le navigateur, ou choisissez la structure dans la liste.');});
