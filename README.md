@@ -21,7 +21,7 @@ Site : https://omargeat.github.io/poly3d-cristallochimie/
 
 ## Numéro de version des fichiers
 
-Les pages appellent leurs fichiers avec un numéro (`poly3d.js?v=9`). Il faut l'augmenter partout à chaque modification,
+Les pages appellent leurs fichiers avec un numéro (`poly3d.js?v=10`). Il faut l'augmenter partout à chaque modification,
 sinon un téléphone peut garder une ancienne version en mémoire et afficher une page à moitié à jour.
 
 ## Ajouter une structure

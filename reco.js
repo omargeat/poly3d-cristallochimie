@@ -137,7 +137,7 @@ if(typeof module!=='undefined'&&module.exports) module.exports=API; else root.Po
 if(typeof importScripts==='function'){
   var REFS=null;
   root.onmessage=function(e){var d=e.data;
-    if(!REFS){importScripts('reco-data.js?v=9'); REFS=root.POLY3D_RECO_DATA.map(function(r){var f=unpack(r); f.page=r.page; f.zones=r.zones; f.w=r.w; f.h=r.h; return f;});}
+    if(!REFS){importScripts('reco-data.js?v=10'); REFS=root.POLY3D_RECO_DATA.map(function(r){var f=unpack(r); f.page=r.page; f.zones=r.zones; f.w=r.w; f.h=r.h; return f;});}
     var t=Date.now(), rgba=d.rgba, n=d.w*d.h, g=new Uint8Array(n);
     for(var i=0;i<n;i++) g[i]=(rgba[i*4]*77+rgba[i*4+1]*150+rgba[i*4+2]*29)>>8;
     var r=recognize(g,d.w,d.h,REFS,700); r.ms=Date.now()-t; root.postMessage(r);};

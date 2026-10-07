@@ -14,10 +14,12 @@ const PAGES={
   8:[{id:'caf2',x0:0,y0:0,x1:720,y1:540}],
   9:[{id:'diamant',x0:0,y0:0,x1:315,y1:540},{id:'graphite',x0:315,y0:0,x1:720,y1:540}]
 };
+// nombre de points de repère par page, quand il diffère du réglage général : la page 1 porte aussi le QR code, très riche en points
+const NPTS={1:2000};
 (async()=>{const dir=process.argv[2], out=[];
   for(const p of Object.keys(PAGES)){
     const {data,info}=await sharp(path.join(dir,'p-'+String(p).padStart(2,'0')+'.png')).greyscale().raw().toBuffer({resolveWithObject:true});
-    const f=R.extract(new Uint8Array(data),info.width,info.height,+(process.env.NREF||1200)), r=R.pack(f); r.page=+p; r.w=info.width; r.h=info.height; r.zones=PAGES[p]; out.push(r);
+    const f=R.extract(new Uint8Array(data),info.width,info.height,NPTS[p]||+(process.env.NREF||1200)), r=R.pack(f); r.page=+p; r.w=info.width; r.h=info.height; r.zones=PAGES[p]; out.push(r);
     if(process.env.VERBOSE) console.log('page',p,info.width+'x'+info.height,f.n,'points');}
   fs.writeFileSync(path.join(__dirname,'..','reco-data.js'),'/* Fichier produit par tools/build-reco.js : ne pas modifier à la main. */\nself.POLY3D_RECO_DATA='+JSON.stringify(out)+';\n');
 })();
