@@ -99,8 +99,3 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
 .stage.ar .caption{right:auto}
 .stage.ar .axis{color:var(--ink);text-shadow:0 0 3px #fff,0 0 3px #fff}
 .facts a{color:var(--accent)}
-/* page labo */
-.home .liens{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 24px}
-.home .liens .lien{margin:0}
-.lien.labo{background:transparent;color:var(--accent);box-shadow:inset 0 0 0 1.5px var(--accent)}
-.labo-mesure{position:absolute;right:10px;top:10px;background:rgba(12,16,20,.7);color:#fff;padding:3px 7px;border-radius:5px;font-family:var(--font-mono);font-size:.7rem;pointer-events:none}

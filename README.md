@@ -19,11 +19,6 @@ Site : https://omargeat.github.io/poly3d-cristallochimie/
 - `reco.js` : la reconnaissance de la page visée (points d'intérêt, appariement, vérification géométrique), sans bibliothèque externe.
 - `reco-data.js` : les points de repère des pages du poly, produits par `tools/build-reco.js` à partir du PDF du cours.
 
-## Labo
-
-- `labo.html` et `labo.js` : page d'essai des mouvements dynamiques (la structure suit la figure du poly). Le scanner n'en dépend pas.
-- La branche `v1-scanner-stable` garde la version de référence d'avant ces essais.
-
 ## Ajouter une structure
 
 1. Ajouter une fiche dans `structures.js`.

@@ -7,7 +7,7 @@ var video=document.getElementById('video'), msg=document.getElementById('msg'), 
     start=document.getElementById('start'), etat=document.getElementById('etat'), viseur=document.getElementById('viseur'), accueil=document.querySelector('.app');
 var NOMS={}; (window.POLY3D_STRUCTURES||[]).forEach(function(s){NOMS[s.id]=s.nom;});
 var canvas=document.createElement('canvas'), ctx=canvas.getContext('2d',{willReadFrequently:true}), worker=null, busy=false, timer=null;
-var vue=null, courant=null, candidat=null, suite=0;   // structure affichée, et reconnaissance en cours de confirmation
+var vue=null, courant=null, candidat=null, suite=0, debut=0;   // structure affichée, et reconnaissance en cours de confirmation
 
 function fail(text){start.hidden=false; start.firstElementChild.innerHTML='<p></p><a class="lien" href="index.html">Choisir dans la liste</a>'; start.querySelector('p').textContent=text; etat.hidden=true; viseur.hidden=true;}
 function next(ms){clearTimeout(timer); timer=setTimeout(tick,ms);}
@@ -27,7 +27,9 @@ function show(id){ // affiche la structure par-dessus la caméra ; la précéden
 }
 function onResult(e){var r=e.data; busy=false;
   if(r.id&&r.id===candidat) suite++; else {candidat=r.id; suite=r.id?1:0;}
-  if(!vue){mesure.textContent=''; msg.className='msg'; msg.textContent=r.id?'Figure repérée, ne bougez plus…':'Recherche d\'une figure…';}
+  if(!vue){mesure.textContent=''; msg.className='msg'; if(!debut) debut=Date.now();
+    // sans résultat au bout de quelques secondes, le plus souvent le téléphone est trop près de la feuille
+    msg.textContent=r.id?'Figure repérée, ne bougez plus…':(Date.now()-debut>5000?'Reculez un peu : la moitié de la page doit être visible':'Recherche d\'une figure…');}
   // deux reconnaissances de suite sont demandées, pour afficher une structure comme pour en changer
   if(candidat&&candidat!==courant&&suite>=2&&!(vue&&vue.touching())){
     if(!vue){msg.className='msg ok'; msg.textContent=(NOMS[candidat]||candidat)+' reconnu';}
